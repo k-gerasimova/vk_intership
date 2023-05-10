@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>vk.COM</title>
+<style>
+
+button{margin: 5px;}
+table, th, td {
+  border:1px solid black;
+}
+</style>
+</style>
+</head>
+<body>
+    <h2>user list</h2>
+    <div>
+        <input type="hidden" id="userId" />
+        <p>
+            login:<br/>
+            <input id="userName" />
+        </p>
+        <p>
+            Password:<br />
+            <input id="userPass" />
+        </p>
+        <p>
+            Group:<br />
+            <select id="group">
+                <option>admin</option>
+                <option>user</option>
+             </select>
+         </p>
+         <p>
+            <button id="sv">save</button>
+            <button id="resetBtn">drop</button>
+        </p>
+    </div>
+    <table>
+        <thead><tr><th>id</th><th>login</th><th>password</th><th>created date</th><th>user group</th><th>state</th><th></th></tr></thead>
+        <tbody>
+        </tbody>
+    </table>
+  
+    <script>
+    // ѕолучение всех пользователей
+
+
+        async function getUsers() {
+
+            // отправл€ет запрос и получаем ответ
+            const response = await fetch("/api/users", {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+            // если запрос прошел нормально
+            if (response.ok == true) {
+                // получаем данные
+                const users = await response.json();
+                const rows = document.querySelector("tbody");
+                // добавл€ем полученные элементы в таблицу
+                users.forEach(user => rows.append(row(user)));
+            }
+        }
+        // ѕолучение одного пользовател€
+        async function getUser(id) {
+            const response = await fetch(`/api/users/${id}`, {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+            if (response.ok == true) {
+
+                const user = await response.json();
+                document.getElementById("userId").value = user.id;
+                document.getElementById("userName").value = user.login;
+                document.getElementById("userPass").value = user.password;
+                document.getElementById("group").value = user.code;
+
+            }
+            else {
+                // если произошла ошибка, получаем сообщение об ошибке
+                const error = await response.json();
+                console.log(error.message); // и выводим его на консоль
+            }
+        }
+        // ƒобавление пользовател€
+        async function createUser(userName, userPass, group) {
+  
+            const response = await fetch("/api/users", {
+                method: "POST",
+                headers: { "Accept": "application/json", "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    login: userName,
+                    password: userPass,
+                    code : group
+                })
+            });
+            if (response.ok == true) {
+                const user = await response.json();
+                document.querySelector("tbody").append(row(user));
+            }
+            else {
+                const error = await response.json();
+                console.log(error.message);
+            }
+        }
+        // »зменение пользовател€
+        async function editUser(userId, userName, userPass, group) {
+            const response = await fetch("/api/users", {
+                method: "PUT",
+                headers: { "Accept": "application/json", "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: userId,
+                    login: userName,
+                    password: userPass,
+                    code : group 
+                })
+            });
+            if (response.ok == true) {
+                const user = await response.json();
+                document.querySelector(`tr[data-rowid='${user.id}']`).replaceWith(row(user));
+            }
+            else {
+                const error = await response.json();
+                console.log(error.message);
+            }
+        }
+
+
+        async function get() {
+            const id = document.getElementById("userId").value;
+            const name = document.getElementById("userName").value;
+            const pass = document.getElementById("userPass").value;
+            const group = document.getElementById("group").value;
+            if (id === "")
+                await createUser(name, pass, group);
+            else
+                await editUser(id, name, pass, group);
+            reset();
+        }
+
+        // ”даление пользовател€
+        async function deleteUser(id) {
+            const response = await fetch(`/api/users/${id}`, {
+                method: "DELETE",
+                headers: { "Accept": "application/json" }
+            });
+            if (response.ok == true) {
+                const user = await response.json();
+                document.querySelector(`tr[data-rowid='${user.id}']`).remove();
+            }
+            else {
+                const error = await response.json();
+                console.log(error.message);
+            }
+        }
+  
+        // сброс данных формы после отправки
+        function reset() {
+            document.getElementById("userId").value = "";
+            document.getElementById("userName").value = "";
+            document.getElementById("userPass").value = "";
+            document.getElementById("group").value = "";
+        }
+        // создание строки дл€ таблицы
+        function row(user) {
+  
+            const tr = document.createElement("tr");
+            tr.setAttribute("data-rowid", user.id);
+                
+            const idTd = document.createElement("td");
+            idTd.append(user.id);
+            tr.append(idTd);
+
+            const nameTd = document.createElement("td");
+            nameTd.append(user.login);
+            tr.append(nameTd);
+  
+            const passTd = document.createElement("td");
+            passTd.append(user.password);
+            tr.append(passTd);
+
+        //created date
+
+            const dateTd = document.createElement("td");
+            dateTd.append(user.created_date);
+            tr.append(dateTd);
+
+        //group
+
+            const groupTd = document.createElement("td");
+            groupTd.append(user.code);
+            tr.append(groupTd);
+
+        //state
+
+            const stateTd = document.createElement("td");
+            stateTd.append(user.state);
+            tr.append(stateTd);
+  
+            const linksTd = document.createElement("td");
+  
+            const editLink = document.createElement("button"); 
+            editLink.append("change");
+            editLink.addEventListener("click", async() => await getUser(user.id));
+            linksTd.append(editLink);
+  
+            const removeLink = document.createElement("button"); 
+            removeLink.append("delete");
+            removeLink.addEventListener("click", async () => await deleteUser(user.id));
+  
+            linksTd.append(removeLink);
+            tr.appendChild(linksTd);
+  
+            return tr;
+        }
+
+        document.getElementById("sv").addEventListener("click", async () => await get());
+
+        // сброс значений формы
+        document.getElementById("resetBtn").addEventListener("click", () =>  reset());
+  
+        // отправка формы
+        
+  
+        // загрузка пользователей
+        getUsers();
+    </script>
+</body>
+</html>
